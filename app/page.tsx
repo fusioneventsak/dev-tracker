@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Project, ProjectStats, Visibility, TeamMember } from '@/lib/types';
-import { Plus, Users, Lock, Globe } from 'lucide-react';
+import { Plus, Users, Lock, Globe, Settings } from 'lucide-react';
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [newProjectName, setNewProjectName] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('private');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -56,14 +57,19 @@ export default function Dashboard() {
     }
   }
 
-  async function createProject(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     if (!newProjectName.trim()) return;
 
     try {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
+      const url = editingProject
+        ? `/api/projects/${editingProject.id}`
+        : '/api/projects';
+      const method = editingProject ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newProjectName,
@@ -76,12 +82,31 @@ export default function Dashboard() {
         setNewProjectName('');
         setVisibility('private');
         setSelectedUsers([]);
+        setEditingProject(null);
         setDialogOpen(false);
         fetchData();
       }
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error('Error saving project:', error);
     }
+  }
+
+  function openEditDialog(project: Project, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingProject(project);
+    setNewProjectName(project.name);
+    setVisibility(project.visibility);
+    setSelectedUsers(project.sharedWith);
+    setDialogOpen(true);
+  }
+
+  function openCreateDialog() {
+    setEditingProject(null);
+    setNewProjectName('');
+    setVisibility('private');
+    setSelectedUsers([]);
+    setDialogOpen(true);
   }
 
   function toggleUserSelection(userId: string) {
@@ -129,17 +154,17 @@ export default function Dashboard() {
         <div className="mt-4 flex md:ml-4 md:mt-0">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={openCreateDialog}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Project
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
-              <form onSubmit={createProject}>
+              <form onSubmit={handleSubmit}>
                 <DialogHeader>
-                  <DialogTitle>Create New Project</DialogTitle>
+                  <DialogTitle>{editingProject ? 'Edit Project' : 'Create New Project'}</DialogTitle>
                   <DialogDescription>
-                    Add a new project to track your development tasks.
+                    {editingProject ? 'Update project details and permissions.' : 'Add a new project to track your development tasks.'}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -213,7 +238,7 @@ export default function Dashboard() {
                   )}
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Create Project</Button>
+                  <Button type="submit">{editingProject ? 'Update Project' : 'Create Project'}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -264,7 +289,7 @@ export default function Dashboard() {
         <Card className="bg-slate-900/50 border-slate-800">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-slate-400 mb-4">No projects yet. Create your first project to get started!</p>
-            <Button onClick={() => setDialogOpen(true)}>
+            <Button onClick={openCreateDialog}>
               <Plus className="mr-2 h-4 w-4" />
               Create Project
             </Button>
@@ -285,10 +310,22 @@ export default function Dashboard() {
               <Link key={project.id} href={`/projects/${project.id}`}>
                 <Card className="bg-slate-900/50 border-slate-800 hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/10 transition-all cursor-pointer h-full">
                   <CardHeader>
-                    <CardTitle className="text-slate-100">{project.name}</CardTitle>
-                    <CardDescription className="text-slate-400">
-                      {projectStats.total} {projectStats.total === 1 ? 'task' : 'tasks'}
-                    </CardDescription>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-slate-100">{project.name}</CardTitle>
+                        <CardDescription className="text-slate-400">
+                          {projectStats.total} {projectStats.total === 1 ? 'task' : 'tasks'}
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => openEditDialog(project, e)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">

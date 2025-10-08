@@ -82,12 +82,17 @@ export async function updateProject(id: string, updates: Partial<Project>): Prom
   const supabase = await createClient();
   await getCurrentUserId(); // Ensure authenticated
 
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString()
+  };
+
+  if (updates.name !== undefined) updateData.name = updates.name;
+  if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
+  if (updates.sharedWith !== undefined) updateData.shared_with = updates.sharedWith;
+
   const { data, error } = await supabase
     .from('projects')
-    .update({
-      name: updates.name,
-      updated_at: new Date().toISOString()
-    })
+    .update(updateData)
     .eq('id', id)
     .select()
     .single();
