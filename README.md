@@ -88,6 +88,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the application.
 Dev Tracker sends email notifications for:
 - **Welcome emails** when new users sign up
 - **Admin notifications** when new users register (optional)
+- **Daily digest emails** every morning at 7am ET with project summaries and upcoming deadlines
 
 ### Setting up Resend
 
@@ -124,12 +125,40 @@ Name: _dmarc
 Value: v=DMARC1; p=none;
 ```
 
+### Daily Digest Emails
+
+The daily digest feature sends all users a comprehensive email every morning at 7am ET containing:
+- Overall task statistics across all projects
+- Upcoming deadlines (next 3 days)
+- Project breakdowns with progress bars
+- Active tasks per project
+
+**Automatic Scheduling:**
+- Runs via Netlify Scheduled Functions
+- Schedule: 7am ET (12pm UTC)
+- Configured in `netlify.toml`
+- Implementation: `netlify/functions/daily-digest.ts`
+
+**Manual Testing:**
+```bash
+# Test digest for all users
+curl https://fusionprojects.netlify.app/api/digest/test
+
+# Test digest for specific user
+curl https://fusionprojects.netlify.app/api/digest/test?email=user@example.com
+```
+
+**Requirements:**
+- `SUPABASE_SERVICE_ROLE_KEY` environment variable must be set
+- Users must have at least one project with tasks to receive emails
+
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Your Supabase anonymous key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (for scheduled functions) |
 | `RESEND_API_KEY` | Yes | Your Resend API key for emails |
 | `ADMIN_EMAIL` | No | Email to receive new user notifications |
 
