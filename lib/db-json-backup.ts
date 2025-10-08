@@ -56,11 +56,13 @@ export async function getProjectById(id: string): Promise<Project | null> {
   return db.projects.find(p => p.id === id) || null;
 }
 
-export async function createProject(name: string): Promise<Project> {
+export async function createProject(dto: { name: string; visibility?: string; sharedWith?: string[] }): Promise<Project> {
   const db = await readDb();
   const newProject: Project = {
     id: generateId(),
-    name,
+    name: dto.name,
+    visibility: (dto.visibility as 'private' | 'specific' | 'all') || 'private',
+    sharedWith: dto.sharedWith || [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };

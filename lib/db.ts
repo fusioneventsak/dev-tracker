@@ -24,6 +24,8 @@ export async function getProjects(): Promise<Project[]> {
   return data.map(p => ({
     id: p.id,
     name: p.name,
+    visibility: p.visibility,
+    sharedWith: p.shared_with,
     createdAt: p.created_at,
     updatedAt: p.updated_at
   }));
@@ -43,18 +45,25 @@ export async function getProjectById(id: string): Promise<Project | null> {
   return {
     id: data.id,
     name: data.name,
+    visibility: data.visibility,
+    sharedWith: data.shared_with,
     createdAt: data.created_at,
     updatedAt: data.updated_at
   };
 }
 
-export async function createProject(name: string): Promise<Project> {
+export async function createProject(dto: { name: string; visibility?: string; sharedWith?: string[] }): Promise<Project> {
   const supabase = await createClient();
   const userId = await getCurrentUserId();
 
   const { data, error } = await supabase
     .from('projects')
-    .insert([{ name, user_id: userId }])
+    .insert([{
+      name: dto.name,
+      user_id: userId,
+      visibility: dto.visibility || 'private',
+      shared_with: dto.sharedWith || []
+    }])
     .select()
     .single();
 
@@ -62,6 +71,8 @@ export async function createProject(name: string): Promise<Project> {
   return {
     id: data.id,
     name: data.name,
+    visibility: data.visibility,
+    sharedWith: data.shared_with,
     createdAt: data.created_at,
     updatedAt: data.updated_at
   };
@@ -85,6 +96,8 @@ export async function updateProject(id: string, updates: Partial<Project>): Prom
   return {
     id: data.id,
     name: data.name,
+    visibility: data.visibility,
+    sharedWith: data.shared_with,
     createdAt: data.created_at,
     updatedAt: data.updated_at
   };
@@ -130,6 +143,8 @@ export async function getTasks(projectId?: string): Promise<Task[]> {
     startDate: t.start_date,
     targetDate: t.target_date,
     notes: t.notes || '',
+    visibility: t.visibility,
+    sharedWith: t.shared_with,
     createdAt: t.created_at,
     updatedAt: t.updated_at
   }));
@@ -158,6 +173,8 @@ export async function getTaskById(id: string): Promise<Task | null> {
     startDate: data.start_date,
     targetDate: data.target_date,
     notes: data.notes || '',
+    visibility: data.visibility,
+    sharedWith: data.shared_with,
     createdAt: data.created_at,
     updatedAt: data.updated_at
   };
@@ -180,7 +197,9 @@ export async function createTask(taskData: Omit<Task, 'id' | 'createdAt' | 'upda
       status: taskData.status,
       start_date: taskData.startDate || null,
       target_date: taskData.targetDate || null,
-      notes: taskData.notes
+      notes: taskData.notes,
+      visibility: taskData.visibility,
+      shared_with: taskData.sharedWith
     }])
     .select()
     .single();
@@ -198,6 +217,8 @@ export async function createTask(taskData: Omit<Task, 'id' | 'createdAt' | 'upda
     startDate: data.start_date,
     targetDate: data.target_date,
     notes: data.notes || '',
+    visibility: data.visibility,
+    sharedWith: data.shared_with,
     createdAt: data.created_at,
     updatedAt: data.updated_at
   };
@@ -223,6 +244,8 @@ export async function updateTask(id: string, updates: Partial<Task>): Promise<Ta
   if (updates.startDate !== undefined) updateData.start_date = updates.startDate || null;
   if (updates.targetDate !== undefined) updateData.target_date = updates.targetDate || null;
   if (updates.notes !== undefined) updateData.notes = updates.notes;
+  if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
+  if (updates.sharedWith !== undefined) updateData.shared_with = updates.sharedWith;
 
   const { data, error } = await supabase
     .from('tasks')
@@ -249,6 +272,8 @@ export async function updateTask(id: string, updates: Partial<Task>): Promise<Ta
     startDate: data.start_date,
     targetDate: data.target_date,
     notes: data.notes || '',
+    visibility: data.visibility,
+    sharedWith: data.shared_with,
     createdAt: data.created_at,
     updatedAt: data.updated_at
   };

@@ -36,7 +36,9 @@ export async function POST(request: NextRequest) {
       status: body.status || 'Backlog',
       startDate: body.startDate || null,
       targetDate: body.targetDate || null,
-      notes: body.notes || ''
+      notes: body.notes || '',
+      visibility: body.visibility || 'private',
+      sharedWith: body.sharedWith || []
     });
 
     return NextResponse.json(task, { status: 201 });

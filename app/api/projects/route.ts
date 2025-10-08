@@ -20,7 +20,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
     }
 
-    const project = await createProject(body.name.trim());
+    const project = await createProject({
+      name: body.name.trim(),
+      visibility: body.visibility,
+      sharedWith: body.sharedWith
+    });
     return NextResponse.json(project, { status: 201 });
   } catch (error) {
     console.error('Error creating project:', error);
