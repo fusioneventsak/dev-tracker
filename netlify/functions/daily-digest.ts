@@ -44,6 +44,12 @@ export const handler = schedule("0 12 * * *", async (event) => {
     const results = await Promise.allSettled(
       users.map(async (user) => {
         try {
+          // Validate user has email
+          if (!user.email) {
+            console.log('Skipping user without email');
+            return null;
+          }
+
           // Fetch all projects for this user
           const { data: projects, error: projectsError } = await supabase
             .from('projects')

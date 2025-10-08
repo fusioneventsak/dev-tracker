@@ -59,6 +59,11 @@ export async function GET(request: Request) {
     const results = await Promise.allSettled(
       targetUsers.map(async (user) => {
         try {
+          // Validate user has email
+          if (!user.email) {
+            return { success: false, error: 'No email', email: 'unknown' };
+          }
+
           // Fetch all projects for this user
           const { data: projects, error: projectsError } = await supabase
             .from('projects')
