@@ -1,0 +1,77 @@
+{
+  "projects": [
+    {
+      "id": "1",
+      "name": "Banana Cam",
+      "createdAt": "2025-10-01T00:00:00.000Z",
+      "updatedAt": "2025-10-01T00:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "name": "Photosphere",
+      "createdAt": "2025-10-01T00:00:00.000Z",
+      "updatedAt": "2025-10-01T00:00:00.000Z"
+    },
+    {
+      "id": "1759894176314-505tc0gvd",
+      "name": "TEST 1",
+      "createdAt": "2025-10-08T03:29:36.314Z",
+      "updatedAt": "2025-10-08T03:29:36.314Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-1",
+      "projectId": "1",
+      "done": false,
+      "featureTask": "Authentication",
+      "description": "Add user authentication system",
+      "assignedTo": "Ferdinand",
+      "priority": "High",
+      "status": "In Progress",
+      "startDate": "2025-10-01",
+      "targetDate": "2025-10-15",
+      "notes": "OAuth integration required",
+      "createdAt": "2025-10-01T00:00:00.000Z",
+      "updatedAt": "2025-10-08T03:03:57.607Z"
+    },
+    {
+      "id": "task-2",
+      "projectId": "1",
+      "done": false,
+      "featureTask": "Camera Integration",
+      "description": "Integrate camera functionality",
+      "assignedTo": "Sarah",
+      "priority": "High",
+      "status": "Backlog",
+      "startDate": null,
+      "targetDate": "2025-10-20",
+      "notes": "",
+      "createdAt": "2025-10-01T00:00:00.000Z",
+      "updatedAt": "2025-10-01T00:00:00.000Z"
+    }
+  ],
+  "teamMembers": [
+    {
+      "id": "member-1",
+      "name": "Ferdinand",
+      "email": "ferdinand@example.com",
+      "role": "Developer"
+    },
+    {
+      "id": "member-2",
+      "name": "Sarah",
+      "email": "sarah@example.com",
+      "role": "Developer"
+    }
+  ],
+  "comments": [
+    {
+      "id": "comment-1",
+      "taskId": "task-1",
+      "author": "Sarah",
+      "content": "We should use NextAuth.js for OAuth integration - it's well maintained and has good documentation.",
+      "createdAt": "2025-10-05T14:30:00.000Z"
+    }
+  ]
+}
