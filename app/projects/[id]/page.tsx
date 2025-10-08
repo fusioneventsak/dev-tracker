@@ -10,8 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Project, Task, TeamMember, Priority, Status } from '@/lib/types';
-import { Plus, ArrowLeft, Trash2, Pencil, MessageSquare } from 'lucide-react';
+import { Project, Task, TeamMember, Priority, Status, Visibility } from '@/lib/types';
+import { Plus, ArrowLeft, Trash2, Pencil, MessageSquare, Users, Lock, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import TaskComments from '@/components/TaskComments';
@@ -28,6 +28,8 @@ export default function ProjectDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [visibility, setVisibility] = useState<Visibility>('private');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -101,6 +103,8 @@ export default function ProjectDetail() {
       targetDate: '',
       notes: ''
     });
+    setVisibility('private');
+    setSelectedUsers([]);
     setDialogOpen(true);
   }
 
@@ -116,6 +120,8 @@ export default function ProjectDetail() {
       targetDate: task.targetDate || '',
       notes: task.notes
     });
+    setVisibility(task.visibility);
+    setSelectedUsers(task.sharedWith);
     setDialogOpen(true);
   }
 
@@ -129,8 +135,8 @@ export default function ProjectDetail() {
       const method = editingTask ? 'PUT' : 'POST';
 
       const body = editingTask
-        ? formData
-        : { ...formData, projectId };
+        ? { ...formData, visibility, sharedWith: visibility === 'specific' ? selectedUsers : [] }
+        : { ...formData, projectId, visibility, sharedWith: visibility === 'specific' ? selectedUsers : [] };
 
       const res = await fetch(url, {
         method,
@@ -145,6 +151,14 @@ export default function ProjectDetail() {
     } catch (error) {
       console.error('Error saving task:', error);
     }
+  }
+
+  function toggleUserSelection(userId: string) {
+    setSelectedUsers(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
   }
 
   async function handleDelete(taskId: string) {
@@ -482,6 +496,64 @@ export default function ProjectDetail() {
                   placeholder="Additional notes"
                 />
               </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="taskVisibility">Who can view this task?</Label>
+                <Select value={visibility} onValueChange={(value: Visibility) => {
+                  setVisibility(value);
+                  if (value !== 'specific') setSelectedUsers([]);
+                }}>
+                  <SelectTrigger id="taskVisibility">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="private">
+                      <div className="flex items-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        <span>Private (Only Me)</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="specific">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        <span>Specific Users</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="all">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        <span>All Users</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {visibility === 'specific' && (
+                <div className="grid gap-2">
+                  <Label>Select Users</Label>
+                  <div className="border border-slate-700 rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                    {teamMembers.length === 0 ? (
+                      <p className="text-sm text-slate-400">No team members found. Add team members first.</p>
+                    ) : (
+                      teamMembers.map((member) => (
+                        <label key={member.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-800 p-2 rounded">
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.includes(member.id)}
+                            onChange={() => toggleUserSelection(member.id)}
+                            className="rounded border-slate-600"
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-sm text-slate-200">{member.name}</span>
+                            <span className="text-xs text-slate-400">{member.email}</span>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Task Comments Section - Only show when editing */}
               {editingTask && (

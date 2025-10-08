@@ -2,10 +2,13 @@
 
 export type Priority = 'High' | 'Medium' | 'Low';
 export type Status = 'Backlog' | 'In Progress' | 'Code Review' | 'Testing' | 'Done';
+export type Visibility = 'private' | 'specific' | 'all';
 
 export interface Project {
   id: string;
   name: string;
+  visibility: Visibility;
+  sharedWith: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -22,6 +25,8 @@ export interface Task {
   startDate: string | null;
   targetDate: string | null;
   notes: string;
+  visibility: Visibility;
+  sharedWith: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -58,10 +63,14 @@ export interface ProjectStats {
 
 export interface CreateProjectDto {
   name: string;
+  visibility?: Visibility;
+  sharedWith?: string[];
 }
 
 export interface UpdateProjectDto {
   name?: string;
+  visibility?: Visibility;
+  sharedWith?: string[];
 }
 
 export interface CreateTaskDto {
@@ -74,6 +83,8 @@ export interface CreateTaskDto {
   startDate?: string | null;
   targetDate?: string | null;
   notes?: string;
+  visibility?: Visibility;
+  sharedWith?: string[];
 }
 
 export interface UpdateTaskDto {
@@ -86,6 +97,8 @@ export interface UpdateTaskDto {
   startDate?: string | null;
   targetDate?: string | null;
   notes?: string;
+  visibility?: Visibility;
+  sharedWith?: string[];
 }
 
 export interface CreateTeamMemberDto {

@@ -7,15 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Project, ProjectStats } from '@/lib/types';
-import { Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Project, ProjectStats, Visibility, TeamMember } from '@/lib/types';
+import { Plus, Users, Lock, Globe } from 'lucide-react';
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [stats, setStats] = useState<Record<string, ProjectStats>>({});
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [visibility, setVisibility] = useState<Visibility>('private');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -23,25 +27,30 @@ export default function Dashboard() {
 
   async function fetchData() {
     try {
-      const [projectsRes, statsRes] = await Promise.all([
+      const [projectsRes, statsRes, teamRes] = await Promise.all([
         fetch('/api/projects'),
-        fetch('/api/stats')
+        fetch('/api/stats'),
+        fetch('/api/team')
       ]);
 
       if (projectsRes.ok && statsRes.ok) {
         const projectsData = await projectsRes.json();
         const statsData = await statsRes.json();
+        const teamData = teamRes.ok ? await teamRes.json() : [];
 
         setProjects(Array.isArray(projectsData) ? projectsData : []);
         setStats(statsData || {});
+        setTeamMembers(Array.isArray(teamData) ? teamData : []);
       } else {
         setProjects([]);
         setStats({});
+        setTeamMembers([]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       setProjects([]);
       setStats({});
+      setTeamMembers([]);
     } finally {
       setIsLoading(false);
     }
@@ -56,17 +65,31 @@ export default function Dashboard() {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newProjectName })
+        body: JSON.stringify({
+          name: newProjectName,
+          visibility,
+          sharedWith: visibility === 'specific' ? selectedUsers : []
+        })
       });
 
       if (res.ok) {
         setNewProjectName('');
+        setVisibility('private');
+        setSelectedUsers([]);
         setDialogOpen(false);
         fetchData();
       }
     } catch (error) {
       console.error('Error creating project:', error);
     }
+  }
+
+  function toggleUserSelection(userId: string) {
+    setSelectedUsers(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
   }
 
   if (isLoading) {
@@ -111,7 +134,7 @@ export default function Dashboard() {
                 New Project
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[500px]">
               <form onSubmit={createProject}>
                 <DialogHeader>
                   <DialogTitle>Create New Project</DialogTitle>
@@ -130,6 +153,64 @@ export default function Dashboard() {
                       autoFocus
                     />
                   </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="visibility">Who can view this project?</Label>
+                    <Select value={visibility} onValueChange={(value: Visibility) => {
+                      setVisibility(value);
+                      if (value !== 'specific') setSelectedUsers([]);
+                    }}>
+                      <SelectTrigger id="visibility">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="private">
+                          <div className="flex items-center gap-2">
+                            <Lock className="h-4 w-4" />
+                            <span>Private (Only Me)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="specific">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span>Specific Users</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="all">
+                          <div className="flex items-center gap-2">
+                            <Globe className="h-4 w-4" />
+                            <span>All Users</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {visibility === 'specific' && (
+                    <div className="grid gap-2">
+                      <Label>Select Users</Label>
+                      <div className="border border-slate-700 rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                        {teamMembers.length === 0 ? (
+                          <p className="text-sm text-slate-400">No team members found. Add team members first.</p>
+                        ) : (
+                          teamMembers.map((member) => (
+                            <label key={member.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-800 p-2 rounded">
+                              <input
+                                type="checkbox"
+                                checked={selectedUsers.includes(member.id)}
+                                onChange={() => toggleUserSelection(member.id)}
+                                className="rounded border-slate-600"
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-sm text-slate-200">{member.name}</span>
+                                <span className="text-xs text-slate-400">{member.email}</span>
+                              </div>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button type="submit">Create Project</Button>

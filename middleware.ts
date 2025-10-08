@@ -15,6 +15,6 @@ export const config = {
      * - /auth (authentication pages)
      * - /api/digest (digest test endpoint)
      */
-    '/((?!_next/static|_next/image|favicon.ico|auth|api/digest).*)',
+    '/((?!_next/static|_next/image|favicon.ico|auth/|api/digest/).*)',
   ],
 }
