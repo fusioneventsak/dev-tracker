@@ -25,12 +25,16 @@ export async function login(formData: FormData) {
 export async function signup(formData: FormData) {
   const supabase = await createClient()
 
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+  const name = formData.get('name') as string
+
   const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
+    email,
+    password,
     options: {
       data: {
-        name: formData.get('name') as string,
+        name,
       },
     },
   }
@@ -39,6 +43,18 @@ export async function signup(formData: FormData) {
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Send welcome email (don't block signup if email fails)
+  try {
+    const { sendWelcomeEmail, sendAdminNotification } = await import('@/lib/email')
+    await Promise.all([
+      sendWelcomeEmail({ userEmail: email, userName: name }),
+      sendAdminNotification({ userEmail: email, userName: name }),
+    ])
+  } catch (emailError) {
+    console.error('Error sending signup emails:', emailError)
+    // Continue with signup even if email fails
   }
 
   revalidatePath('/', 'layout')
