@@ -19,7 +19,7 @@ interface AdminNotificationProps {
 export async function sendWelcomeEmail({ userEmail, userName }: WelcomeEmailProps) {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Dev Tracker <arthurk@fusion-events.ca>',
+      from: 'Dev Tracker <noreply@fusionprojects.pro>',
       to: [userEmail],
       subject: 'Welcome to Dev Tracker!',
       html: `
@@ -102,7 +102,7 @@ export async function sendAdminNotification({ userEmail, userName }: AdminNotifi
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Dev Tracker <arthurk@fusion-events.ca>',
+      from: 'Dev Tracker <noreply@fusionprojects.pro>',
       to: [adminEmail],
       subject: 'New User Signup - Dev Tracker',
       html: `
@@ -197,7 +197,7 @@ export async function sendDailyDigest({ userEmail, userName, projects }: DailyDi
     });
 
     const { data, error } = await resend.emails.send({
-      from: 'Dev Tracker <arthurk@fusion-events.ca>',
+      from: 'Dev Tracker <noreply@fusionprojects.pro>',
       to: [userEmail],
       subject: `Daily Digest - ${totalTasks} Tasks Across ${projects.length} Projects`,
       html: `
