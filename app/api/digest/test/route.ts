@@ -14,14 +14,6 @@ const supabase = createClient(
   }
 );
 
-interface UserData {
-  id: string;
-  email: string;
-  user_metadata: {
-    name?: string;
-  };
-}
-
 /**
  * Manual trigger endpoint for testing daily digest emails
  * GET /api/digest/test - Send digest to all users
@@ -52,7 +44,7 @@ export async function GET(request: Request) {
 
     // Filter to specific user if email provided
     const targetUsers = testEmail
-      ? users.filter((u: UserData) => u.email === testEmail)
+      ? users.filter((u) => u.email === testEmail)
       : users;
 
     if (targetUsers.length === 0) {
@@ -65,7 +57,7 @@ export async function GET(request: Request) {
     console.log(`Sending test digest to ${targetUsers.length} user(s)`);
 
     const results = await Promise.allSettled(
-      targetUsers.map(async (user: UserData) => {
+      targetUsers.map(async (user) => {
         try {
           // Fetch all projects for this user
           const { data: projects, error: projectsError } = await supabase

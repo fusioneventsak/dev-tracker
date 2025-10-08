@@ -14,14 +14,6 @@ const supabase = createClient(
   }
 );
 
-interface UserData {
-  id: string;
-  email: string;
-  user_metadata: {
-    name?: string;
-  };
-}
-
 // Scheduled to run at 7am ET (12pm UTC during EST, 11am UTC during EDT)
 // Using 12pm UTC as baseline (7am EST)
 export const handler = schedule("0 12 * * *", async (event) => {
@@ -50,7 +42,7 @@ export const handler = schedule("0 12 * * *", async (event) => {
     console.log(`Found ${users.length} users`);
 
     const results = await Promise.allSettled(
-      users.map(async (user: UserData) => {
+      users.map(async (user) => {
         try {
           // Fetch all projects for this user
           const { data: projects, error: projectsError } = await supabase
