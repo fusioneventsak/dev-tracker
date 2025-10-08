@@ -8,8 +8,3 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-# Daily digest scheduled function
-# Runs at 7am ET (12pm UTC during EST)
-[[functions."daily-digest"]]
-  schedule = "0 12 * * *"
