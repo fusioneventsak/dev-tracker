@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { signout } from '@/app/auth/actions';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
+import NotificationCenter from '@/components/NotificationCenter';
 
 interface NavbarProps {
   userEmail?: string | null;
@@ -61,7 +62,10 @@ export default function Navbar({ userEmail }: NavbarProps) {
           </div>
           <div className="flex items-center gap-4">
             {userEmail && (
-              <span className="text-sm text-slate-400">{userEmail}</span>
+              <>
+                <NotificationCenter />
+                <span className="text-sm text-slate-400">{userEmail}</span>
+              </>
             )}
             <Button
               onClick={handleSignOut}

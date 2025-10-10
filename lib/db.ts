@@ -13,7 +13,7 @@ async function getCurrentUserId() {
 // Project operations
 export async function getProjects(): Promise<Project[]> {
   const supabase = await createClient();
-  await getCurrentUserId(); // Ensure authenticated
+  const userId = await getCurrentUserId();
 
   const { data, error } = await supabase
     .from('projects')
@@ -21,8 +21,20 @@ export async function getProjects(): Promise<Project[]> {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data.map(p => ({
+
+  // Filter projects by user access:
+  // 1. User owns the project (user_id matches)
+  // 2. Project is visible to all (visibility = 'all')
+  // 3. User is in the sharedWith list (shared_with contains userId)
+  const filteredData = data.filter(p =>
+    p.user_id === userId ||
+    p.visibility === 'all' ||
+    (p.shared_with && Array.isArray(p.shared_with) && p.shared_with.includes(userId))
+  );
+
+  return filteredData.map(p => ({
     id: p.id,
+    userId: p.user_id,
     name: p.name,
     visibility: p.visibility,
     sharedWith: p.shared_with,
@@ -33,7 +45,7 @@ export async function getProjects(): Promise<Project[]> {
 
 export async function getProjectById(id: string): Promise<Project | null> {
   const supabase = await createClient();
-  await getCurrentUserId(); // Ensure authenticated
+  const userId = await getCurrentUserId();
 
   const { data, error } = await supabase
     .from('projects')
@@ -42,8 +54,23 @@ export async function getProjectById(id: string): Promise<Project | null> {
     .single();
 
   if (error) return null;
+
+  // Check if user has access to this project:
+  // 1. User owns the project (user_id matches)
+  // 2. Project is visible to all (visibility = 'all')
+  // 3. User is in the sharedWith list (shared_with contains userId)
+  const hasAccess =
+    data.user_id === userId ||
+    data.visibility === 'all' ||
+    (data.shared_with && Array.isArray(data.shared_with) && data.shared_with.includes(userId));
+
+  if (!hasAccess) {
+    return null; // User doesn't have permission to view this project
+  }
+
   return {
     id: data.id,
+    userId: data.user_id,
     name: data.name,
     visibility: data.visibility,
     sharedWith: data.shared_with,
@@ -70,6 +97,7 @@ export async function createProject(dto: { name: string; visibility?: string; sh
   if (error) throw error;
   return {
     id: data.id,
+    userId: data.user_id,
     name: data.name,
     visibility: data.visibility,
     sharedWith: data.shared_with,
@@ -80,7 +108,13 @@ export async function createProject(dto: { name: string; visibility?: string; sh
 
 export async function updateProject(id: string, updates: Partial<Project>): Promise<Project | null> {
   const supabase = await createClient();
-  await getCurrentUserId(); // Ensure authenticated
+  const userId = await getCurrentUserId();
+
+  // First check if user has permission to update this project
+  const existingProject = await getProjectById(id);
+  if (!existingProject || existingProject.userId !== userId) {
+    return null; // Only owner can update the project
+  }
 
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString()
@@ -100,6 +134,7 @@ export async function updateProject(id: string, updates: Partial<Project>): Prom
   if (error) return null;
   return {
     id: data.id,
+    userId: data.user_id,
     name: data.name,
     visibility: data.visibility,
     sharedWith: data.shared_with,
@@ -110,7 +145,13 @@ export async function updateProject(id: string, updates: Partial<Project>): Prom
 
 export async function deleteProject(id: string): Promise<boolean> {
   const supabase = await createClient();
-  await getCurrentUserId(); // Ensure authenticated
+  const userId = await getCurrentUserId();
+
+  // First check if user has permission to delete this project
+  const existingProject = await getProjectById(id);
+  if (!existingProject || existingProject.userId !== userId) {
+    return false; // Only owner can delete the project
+  }
 
   const { error } = await supabase
     .from('projects')
@@ -791,4 +832,36 @@ export async function updateLastRead(chatId: string) {
     .eq('user_id', userId);
 
   return !error;
+}
+
+// Notification operations
+export async function createNotification(params: {
+  userId: string;
+  type: 'chat_message' | 'task_assigned' | 'task_updated' | 'comment_added';
+  title: string;
+  message: string;
+  link?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const supabase = createServiceClient();
+
+  const { data, error } = await supabase
+    .from('notifications')
+    .insert([{
+      user_id: params.userId,
+      type: params.type,
+      title: params.title,
+      message: params.message,
+      link: params.link,
+      metadata: params.metadata || {}
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating notification:', error);
+    return null;
+  }
+
+  return data;
 }

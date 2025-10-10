@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { Message, MessageFile } from '@/lib/types';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 
 // Image Preview Component
 function ImagePreview({
@@ -99,6 +100,7 @@ export default function ChatSidebar() {
   const [expandedImage, setExpandedImage] = useState<{ file: MessageFile; url: string } | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
@@ -108,6 +110,13 @@ export default function ChatSidebar() {
     initializeChat();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reset unread count when chat is opened
+  useEffect(() => {
+    if (isOpen) {
+      setUnreadCount(0);
+    }
+  }, [isOpen]);
 
   // Set up real-time subscription
   useEffect(() => {
@@ -184,6 +193,19 @@ export default function ChatSidebar() {
                 // Update existing message with files if it exists
                 return prev.map(m => m.id === newMsg.id ? newMsg : m);
               }
+
+              // If chat is closed and message is from someone else, show toast and increment unread
+              if (!isOwnMessage && !isOpen) {
+                toast(
+                  `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
+                  {
+                    icon: '💬',
+                    duration: 4000,
+                  }
+                );
+                setUnreadCount(count => count + 1);
+              }
+
               return [...prev, newMsg];
             });
           }
@@ -325,7 +347,7 @@ export default function ChatSidebar() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatId, supabase]);
+  }, [chatId, isOpen, supabase]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -636,6 +658,13 @@ export default function ChatSidebar() {
         aria-label="Toggle chat"
       >
         {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
+
+        {/* Unread badge */}
+        {!isOpen && unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
       </button>
 
       {/* Chat Sidebar */}

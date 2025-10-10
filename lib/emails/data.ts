@@ -95,6 +95,7 @@ export async function getUserDailySnapshot(userId: string): Promise<UserTaskSnap
 
   const projectList: Project[] = (projects || []).map(p => ({
     id: p.id,
+    userId: p.user_id,
     name: p.name,
     visibility: p.visibility,
     sharedWith: p.shared_with,

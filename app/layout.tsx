@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import ChatSidebar from "@/components/ChatSidebar";
 import InstallPWA from "@/components/InstallPWA";
+import { Toaster } from "react-hot-toast";
 import { createClient } from "@/lib/supabase/server";
 
 const geistSans = Geist({
@@ -74,6 +75,17 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#1e293b',
+              color: '#f1f5f9',
+              border: '1px solid #334155',
+            },
+          }}
+        />
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
           <Navbar userEmail={user?.email} />
           <main>{children}</main>

@@ -60,6 +60,7 @@ export async function createProject(dto: { name: string; visibility?: string; sh
   const db = await readDb();
   const newProject: Project = {
     id: generateId(),
+    userId: 'legacy-user', // Placeholder - this backup file is not used in production
     name: dto.name,
     visibility: (dto.visibility as 'private' | 'specific' | 'all') || 'private',
     sharedWith: dto.sharedWith || [],

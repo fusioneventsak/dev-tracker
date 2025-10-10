@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTasks, createTask } from '@/lib/db';
+import { getTasks, createTask, createNotification } from '@/lib/db';
 import { CreateTaskDto } from '@/lib/types';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,6 +41,63 @@ export async function POST(request: NextRequest) {
       visibility: body.visibility || 'private',
       sharedWith: body.sharedWith || []
     });
+
+    // Create notification if task is assigned to someone
+    if (body.assignedTo && body.assignedTo.trim()) {
+      const supabase = await createClient();
+
+      // Get the assignee's user ID from team members
+      const { data: assignee } = await supabase
+        .from('team_members')
+        .select('id, email')
+        .eq('email', body.assignedTo.toLowerCase())
+        .single();
+
+      if (assignee) {
+        // Get project name
+        const { data: project } = await supabase
+          .from('projects')
+          .select('name')
+          .eq('id', body.projectId)
+          .single();
+
+        const projectName = project?.name || 'a project';
+
+        // Get current user's info
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: creatorProfile } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('id', user?.id || '')
+          .single();
+
+        const creatorName = creatorProfile?.name || creatorProfile?.email?.split('@')[0] || 'Someone';
+
+        // Find the user ID of the assignee from profiles
+        const { data: assigneeUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', body.assignedTo.toLowerCase())
+          .single();
+
+        if (assigneeUser) {
+          await createNotification({
+            userId: assigneeUser.id,
+            type: 'task_assigned',
+            title: `New task assigned: ${body.featureTask.trim()}`,
+            message: `${creatorName} assigned you a task in ${projectName}`,
+            link: `/projects/${body.projectId}`,
+            metadata: {
+              taskId: task.id,
+              projectId: body.projectId,
+              projectName,
+              creatorId: user?.id,
+              creatorName,
+            },
+          });
+        }
+      }
+    }
 
     return NextResponse.json(task, { status: 201 });
   } catch (error) {

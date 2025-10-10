@@ -3,6 +3,7 @@
   "short_name": "Dev Tracker",
   "description": "Track development projects, tasks, and team collaboration in real-time",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#3b82f6",

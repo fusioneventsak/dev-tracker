@@ -6,6 +6,7 @@ export type Visibility = 'private' | 'specific' | 'all';
 
 export interface Project {
   id: string;
+  userId: string;
   name: string;
   visibility: Visibility;
   sharedWith: string[];
@@ -189,4 +190,20 @@ export interface ChatWithDetails extends Chat {
   participants: ChatParticipant[];
   lastMessage?: Message;
   unreadCount?: number;
+}
+
+// Notification types
+export type NotificationType = 'chat_message' | 'task_assigned' | 'task_updated' | 'comment_added';
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link?: string;
+  read: boolean;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 }
