@@ -14,13 +14,19 @@ export default function InstallPWA() {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   useEffect(() => {
+    console.log('InstallPWA component mounted');
+
     const handler = (e: Event) => {
+      console.log('beforeinstallprompt event fired');
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
 
       // Check if user has dismissed the prompt before
       const dismissed = localStorage.getItem('pwa-install-dismissed');
+      console.log('Previously dismissed:', dismissed);
+
       if (!dismissed) {
+        console.log('Showing install prompt');
         setShowInstallPrompt(true);
       }
     };
@@ -28,7 +34,11 @@ export default function InstallPWA() {
     window.addEventListener('beforeinstallprompt', handler);
 
     // Check if app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    console.log('App is standalone:', isStandalone);
+
+    if (isStandalone) {
+      console.log('App already installed, hiding prompt');
       setShowInstallPrompt(false);
     }
 
@@ -38,17 +48,28 @@ export default function InstallPWA() {
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === 'accepted') {
-      console.log('PWA installed');
+    if (!deferredPrompt) {
+      console.log('No deferred prompt available');
+      return;
     }
 
-    setDeferredPrompt(null);
-    setShowInstallPrompt(false);
+    try {
+      console.log('Showing install prompt...');
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log('User choice:', outcome);
+
+      if (outcome === 'accepted') {
+        console.log('PWA installed successfully');
+      } else {
+        console.log('PWA installation dismissed');
+      }
+
+      setDeferredPrompt(null);
+      setShowInstallPrompt(false);
+    } catch (error) {
+      console.error('Error during PWA installation:', error);
+    }
   };
 
   const handleDismiss = () => {
