@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteTeamMember, updateTeamMember } from '@/lib/db';
+import { deleteTeamMember, deleteAuthenticatedUser, updateTeamMember } from '@/lib/db';
 
 export async function PUT(
   request: NextRequest,
@@ -28,15 +28,27 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const success = await deleteTeamMember(id);
 
-    if (!success) {
-      return NextResponse.json({ error: 'Team member not found' }, { status: 404 });
+    // Verify caller is authenticated (security check before allowing deletion)
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Delete authenticated user (deleteAuthenticatedUser uses service role for full access)
+    const success = await deleteAuthenticatedUser(id);
+
+    if (!success) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    console.log(`✓ Deleted user ${id} from team`);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting team member:', error);
-    return NextResponse.json({ error: 'Failed to delete team member' }, { status: 500 });
+    console.error('Error deleting user:', error);
+    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
   }
 }

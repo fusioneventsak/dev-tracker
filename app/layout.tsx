@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import ChatSidebar from "@/components/ChatSidebar";
 import { createClient } from "@/lib/supabase/server";
 
 const geistSans = Geist({
@@ -35,6 +36,7 @@ export default async function RootLayout({
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
           <Navbar userEmail={user?.email} />
           <main>{children}</main>
+          {user && <ChatSidebar />}
         </div>
       </body>
     </html>

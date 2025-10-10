@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Project, ProjectStats, Visibility, TeamMember } from '@/lib/types';
-import { Plus, Users, Lock, Globe, Settings } from 'lucide-react';
+import { Plus, Users, Lock, Globe, Settings, Trash2, Loader2 } from 'lucide-react';
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -21,6 +21,9 @@ export default function Dashboard() {
   const [newProjectName, setNewProjectName] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('private');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -115,6 +118,40 @@ export default function Dashboard() {
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
+  }
+
+  function openDeleteDialog(project: Project, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setProjectToDelete(project);
+    setDeleteDialogOpen(true);
+  }
+
+  async function handleDelete() {
+    if (!projectToDelete) return;
+
+    setIsDeleting(true);
+
+    try {
+      const res = await fetch(`/api/projects/${projectToDelete.id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        // Remove from UI
+        setProjects(projects.filter(p => p.id !== projectToDelete.id));
+        setDeleteDialogOpen(false);
+        setProjectToDelete(null);
+        // Refresh stats
+        fetchData();
+      } else {
+        console.error('Failed to delete project');
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   if (isLoading) {
@@ -317,14 +354,26 @@ export default function Dashboard() {
                           {projectStats.total} {projectStats.total === 1 ? 'task' : 'tasks'}
                         </CardDescription>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => openEditDialog(project, e)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Settings className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => openEditDialog(project, e)}
+                          className="h-8 w-8 p-0"
+                          title="Edit project"
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => openDeleteDialog(project, e)}
+                          className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                          title="Delete project"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -361,6 +410,58 @@ export default function Dashboard() {
           })}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Project</DialogTitle>
+            <DialogDescription asChild>
+              <div>
+                Are you sure you want to delete <strong>{projectToDelete?.name}</strong>?
+                <br /><br />
+                <strong className="text-red-400">⚠️ Warning:</strong> This will permanently delete:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>All tasks in this project</li>
+                  <li>All comments on those tasks</li>
+                  <li>All task files</li>
+                  <li>The project itself</li>
+                </ul>
+                <br />
+                This action cannot be undone.
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Project
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 // Supabase database service
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { Database, Project, Task, TeamMember, ProjectStats, TaskComment, Priority, Status } from './types';
 
 // Helper to get current user ID
@@ -343,12 +343,179 @@ export async function deleteTeamMember(id: string): Promise<boolean> {
   const supabase = await createClient();
   await getCurrentUserId(); // Ensure authenticated
 
+  // Get the team member's email first
+  const { data: member } = await supabase
+    .from('team_members')
+    .select('email')
+    .eq('id', id)
+    .single();
+
+  // Delete the team member
   const { error } = await supabase
     .from('team_members')
     .delete()
     .eq('id', id);
 
-  return !error;
+  if (error) return false;
+
+  // Also delete any pending invitations for this email
+  if (member?.email) {
+    await supabase
+      .from('user_invitations')
+      .delete()
+      .eq('email', member.email.toLowerCase());
+  }
+
+  return true;
+}
+
+export async function deleteAuthenticatedUser(userId: string): Promise<boolean> {
+  try {
+    // Use service role client to bypass RLS (no auth check needed - service role has full access)
+    const supabase = createServiceClient();
+
+    console.log(`🗑️ Starting deletion process for user: ${userId}`);
+
+    // Step 1: Delete all tasks created by this user
+    const { error: tasksError } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('user_id', userId);
+
+    if (tasksError) {
+      console.error('Error deleting user tasks:', tasksError);
+    } else {
+      console.log(`✓ Deleted tasks for user ${userId}`);
+    }
+
+    // Step 2: Delete all projects created by this user
+    const { error: projectsError } = await supabase
+      .from('projects')
+      .delete()
+      .eq('user_id', userId);
+
+    if (projectsError) {
+      console.error('Error deleting user projects:', projectsError);
+    } else {
+      console.log(`✓ Deleted projects for user ${userId}`);
+    }
+
+    // Step 3: Delete all comments created by this user
+    const { error: commentsError } = await supabase
+      .from('comments')
+      .delete()
+      .eq('user_id', userId);
+
+    if (commentsError) {
+      console.error('Error deleting user comments:', commentsError);
+    } else {
+      console.log(`✓ Deleted comments for user ${userId}`);
+    }
+
+    // Step 4: Delete all task files uploaded by this user
+    const { error: taskFilesError } = await supabase
+      .from('task_files')
+      .delete()
+      .eq('uploaded_by', userId);
+
+    if (taskFilesError) {
+      console.error('Error deleting user task files:', taskFilesError);
+    } else {
+      console.log(`✓ Deleted task files for user ${userId}`);
+    }
+
+    // Step 5: Delete all messages sent by this user (this will cascade delete message_files)
+    const { error: messagesError } = await supabase
+      .from('messages')
+      .delete()
+      .eq('sender_id', userId);
+
+    if (messagesError) {
+      console.error('Error deleting user messages:', messagesError);
+    } else {
+      console.log(`✓ Deleted messages for user ${userId}`);
+    }
+
+    // Step 6: Delete all chats created by this user (this will cascade delete chat_participants)
+    const { error: chatsError } = await supabase
+      .from('chats')
+      .delete()
+      .eq('created_by', userId);
+
+    if (chatsError) {
+      console.error('Error deleting chats:', chatsError);
+    } else {
+      console.log(`✓ Deleted chats created by user ${userId}`);
+    }
+
+    // Step 7: Delete user from chat_participants (remaining ones where user didn't create the chat)
+    const { error: chatParticipantsError } = await supabase
+      .from('chat_participants')
+      .delete()
+      .eq('user_id', userId);
+
+    if (chatParticipantsError) {
+      console.error('Error deleting chat participants:', chatParticipantsError);
+    } else {
+      console.log(`✓ Deleted chat participants for user ${userId}`);
+    }
+
+    // Step 8: Delete invitations sent by this user
+    const { error: invitationsError } = await supabase
+      .from('user_invitations')
+      .delete()
+      .eq('invited_by', userId);
+
+    if (invitationsError) {
+      console.error('Error deleting user invitations:', invitationsError);
+    } else {
+      console.log(`✓ Deleted invitations sent by user ${userId}`);
+    }
+
+    // Step 9: Delete all team members created by this user
+    const { error: teamMembersError } = await supabase
+      .from('team_members')
+      .delete()
+      .eq('user_id', userId);
+
+    if (teamMembersError) {
+      console.error('Error deleting team members:', teamMembersError);
+    } else {
+      console.log(`✓ Deleted team members for user ${userId}`);
+    }
+
+    // Step 10: Delete the user's profile (CRITICAL - must happen before auth user deletion)
+    // The profiles table has FK to auth.users without CASCADE, so we must delete it explicitly
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (profileError) {
+      console.error('Error deleting user profile:', profileError);
+      return false;
+    } else {
+      console.log(`✓ Deleted profile for user ${userId}`);
+    }
+
+    // Step 11: Delete user from auth.users (profile is now gone, so this will succeed)
+    const { error } = await supabase.auth.admin.deleteUser(userId);
+
+    if (error) {
+      console.error('Error deleting authenticated user from auth:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      console.error('Error status:', error.status);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      return false;
+    }
+
+    console.log(`✅ Successfully deleted user and all associated data: ${userId}`);
+    return true;
+  } catch (error) {
+    console.error('Error in deleteAuthenticatedUser:', error);
+    return false;
+  }
 }
 
 // Comment operations
@@ -436,4 +603,192 @@ export async function getAllStats(): Promise<Record<string, ProjectStats>> {
   }
 
   return stats;
+}
+
+// Chat operations
+export async function getOrCreateAllChat(): Promise<{ id: string; name: string | null; type: string }> {
+  const supabase = await createClient();
+  const userId = await getCurrentUserId();
+
+  // Try to find existing "all" chat
+  const { data: existingChat } = await supabase
+    .from('chats')
+    .select('*')
+    .eq('type', 'all')
+    .single();
+
+  if (existingChat) {
+    // Ensure current user is a participant
+    const { data: participant } = await supabase
+      .from('chat_participants')
+      .select('*')
+      .eq('chat_id', existingChat.id)
+      .eq('user_id', userId)
+      .single();
+
+    if (!participant) {
+      await supabase
+        .from('chat_participants')
+        .insert([{
+          chat_id: existingChat.id,
+          user_id: userId
+        }]);
+    }
+
+    return existingChat;
+  }
+
+  // Create "all" chat if it doesn't exist
+  const { data: newChat, error: chatError } = await supabase
+    .from('chats')
+    .insert([{
+      name: 'All Team',
+      type: 'all',
+      created_by: userId
+    }])
+    .select()
+    .single();
+
+  if (chatError) throw chatError;
+
+  // Add creator as participant
+  await supabase
+    .from('chat_participants')
+    .insert([{
+      chat_id: newChat.id,
+      user_id: userId
+    }]);
+
+  return newChat;
+}
+
+export async function getMessages(chatId: string, limit: number = 50) {
+  const supabase = await createClient();
+  const currentUserId = await getCurrentUserId();
+
+  // Fetch messages with files and reactions
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*, message_files (*), message_reactions (*)')
+    .eq('chat_id', chatId)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  // Get current user's email
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentUserEmail = user?.email || 'Unknown';
+
+  // Get all unique sender IDs from messages
+  const senderIds = [...new Set(data.map(m => m.sender_id))].filter(id => id !== currentUserId);
+
+  // Get all unique user IDs from reactions
+  const reactionUserIds = [...new Set(data.flatMap(m =>
+    m.message_reactions?.map((r: any) => r.user_id) || []
+  ))].filter(id => id !== currentUserId);
+
+  // Combine all user IDs
+  const allUserIds = [...new Set([...senderIds, ...reactionUserIds])];
+
+  // Fetch user information for all users from the profiles table
+  const { data: usersData } = await supabase
+    .from('profiles')
+    .select('id, name, email')
+    .in('id', allUserIds);
+
+  // Create a map of user_id to user name/email
+  const userMap = new Map<string, string>();
+  usersData?.forEach(u => {
+    userMap.set(u.id, u.name || u.email?.split('@')[0] || 'Unknown');
+  });
+
+  return data.map(m => ({
+    id: m.id,
+    chatId: m.chat_id,
+    senderId: m.sender_id,
+    content: m.content,
+    replyTo: m.reply_to,
+    createdAt: m.created_at,
+    updatedAt: m.updated_at,
+    isDeleted: m.is_deleted,
+    senderEmail: m.sender_id === currentUserId ? currentUserEmail : (userMap.get(m.sender_id) || 'Unknown'),
+    files: m.message_files?.map((f: any) => ({
+      id: f.id,
+      messageId: f.message_id,
+      fileName: f.file_name,
+      fileSize: f.file_size,
+      fileType: f.file_type,
+      storagePath: f.storage_path,
+      uploadedAt: f.uploaded_at
+    })) || [],
+    reactions: m.message_reactions?.map((r: any) => ({
+      id: r.id,
+      messageId: r.message_id,
+      userId: r.user_id,
+      reaction: r.reaction,
+      createdAt: r.created_at,
+      userName: r.user_id === currentUserId ? currentUserEmail : (userMap.get(r.user_id) || 'Unknown')
+    })) || []
+  })).reverse();
+}
+
+export async function sendMessage(chatId: string, content: string, replyTo: string | null = null) {
+  const supabase = await createClient();
+  const userId = await getCurrentUserId();
+
+  // Insert message with optional reply_to
+  const { data, error } = await supabase
+    .from('messages')
+    .insert([{
+      chat_id: chatId,
+      sender_id: userId,
+      content,
+      reply_to: replyTo
+    }])
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Get current user's email
+  const { data: { user } } = await supabase.auth.getUser();
+
+  return {
+    id: data.id,
+    chatId: data.chat_id,
+    senderId: data.sender_id,
+    content: data.content,
+    replyTo: data.reply_to,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+    isDeleted: data.is_deleted,
+    senderEmail: user?.email || 'Unknown'
+  };
+}
+
+export async function deleteMessage(messageId: string) {
+  const supabase = await createClient();
+  await getCurrentUserId();
+
+  const { error } = await supabase
+    .from('messages')
+    .update({ is_deleted: true })
+    .eq('id', messageId);
+
+  return !error;
+}
+
+export async function updateLastRead(chatId: string) {
+  const supabase = await createClient();
+  const userId = await getCurrentUserId();
+
+  const { error } = await supabase
+    .from('chat_participants')
+    .update({ last_read_at: new Date().toISOString() })
+    .eq('chat_id', chatId)
+    .eq('user_id', userId);
+
+  return !error;
 }

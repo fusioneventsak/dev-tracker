@@ -10,11 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Project, Task, TeamMember, Priority, Status, Visibility } from '@/lib/types';
+import { Project, Task, Priority, Status, Visibility } from '@/lib/types';
 import { Plus, ArrowLeft, Trash2, Pencil, MessageSquare, Users, Lock, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import TaskComments from '@/components/TaskComments';
+import { createClient } from '@/lib/supabase/client';
 
 export default function ProjectDetail() {
   const params = useParams();
@@ -23,13 +24,14 @@ export default function ProjectDetail() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string; email: string }>>([]);
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [visibility, setVisibility] = useState<Visibility>('private');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>('Anonymous');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -45,14 +47,27 @@ export default function ProjectDetail() {
 
   useEffect(() => {
     fetchData();
+    fetchCurrentUser();
   }, [projectId]);
+
+  async function fetchCurrentUser() {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setCurrentUserEmail(user.email);
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  }
 
   async function fetchData() {
     try {
-      const [projectRes, tasksRes, teamRes] = await Promise.all([
+      const [projectRes, tasksRes, usersRes] = await Promise.all([
         fetch(`/api/projects/${projectId}`),
         fetch(`/api/tasks?projectId=${projectId}`),
-        fetch('/api/team')
+        fetch('/api/users')
       ]);
 
       if (!projectRes.ok) {
@@ -62,11 +77,18 @@ export default function ProjectDetail() {
 
       const projectData = await projectRes.json();
       const tasksData = await tasksRes.json();
-      const teamData = await teamRes.json();
+      const usersData = await usersRes.json();
 
       setProject(projectData);
       setTasks(tasksData);
-      setTeamMembers(teamData);
+
+      // Map all profiles (including current user) to team members for assignment
+      const allUsers = usersData.allProfiles || [];
+      setTeamMembers(allUsers.map((profile: any) => ({
+        id: profile.id,
+        name: profile.name || profile.email,
+        email: profile.email
+      })));
 
       // Fetch comment counts for all tasks
       const counts: Record<string, number> = {};
@@ -416,8 +438,23 @@ export default function ProjectDetail() {
                 <div className="grid gap-2">
                   <Label htmlFor="assignedTo">Assigned To</Label>
                   <Select
-                    value={formData.assignedTo || "unassigned"}
-                    onValueChange={(value) => setFormData({ ...formData, assignedTo: value === "unassigned" ? "" : value })}
+                    value={(() => {
+                      // Convert name to ID for Select value (to match SelectItem values which use IDs)
+                      if (!formData.assignedTo) return "unassigned";
+                      const member = teamMembers.find(m => m.name === formData.assignedTo);
+                      return member ? member.id : "unassigned";
+                    })()}
+                    onValueChange={(value) => {
+                      if (value === "unassigned") {
+                        setFormData({ ...formData, assignedTo: "" });
+                      } else {
+                        // Find the member by ID and store their name (for backward compatibility)
+                        const member = teamMembers.find(m => m.id === value);
+                        if (member) {
+                          setFormData({ ...formData, assignedTo: member.name });
+                        }
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select team member" />
@@ -425,7 +462,7 @@ export default function ProjectDetail() {
                     <SelectContent>
                       <SelectItem value="unassigned">Unassigned</SelectItem>
                       {teamMembers.map((member) => (
-                        <SelectItem key={member.id} value={member.name}>
+                        <SelectItem key={member.id} value={member.id}>
                           {member.name}
                         </SelectItem>
                       ))}
@@ -560,7 +597,7 @@ export default function ProjectDetail() {
                 <div className="border-t border-slate-700 pt-4 mt-2">
                   <TaskComments
                     taskId={editingTask.id}
-                    currentUser={formData.assignedTo || 'Anonymous'}
+                    currentUser={currentUserEmail}
                   />
                 </div>
               )}

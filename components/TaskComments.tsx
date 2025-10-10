@@ -17,6 +17,7 @@ export default function TaskComments({ taskId, currentUser = 'Anonymous' }: Task
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchComments();
@@ -41,6 +42,7 @@ export default function TaskComments({ taskId, currentUser = 'Anonymous' }: Task
     if (!newComment.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
+    setError(null);
     try {
       const res = await fetch('/api/comments', {
         method: 'POST',
@@ -55,9 +57,13 @@ export default function TaskComments({ taskId, currentUser = 'Anonymous' }: Task
       if (res.ok) {
         setNewComment('');
         fetchComments();
+      } else {
+        const errorData = await res.json().catch(() => ({ message: 'Failed to save comment' }));
+        setError(errorData.message || 'Failed to save comment. Please try again.');
       }
     } catch (error) {
       console.error('Error creating comment:', error);
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -147,6 +153,11 @@ export default function TaskComments({ taskId, currentUser = 'Anonymous' }: Task
 
       {/* Add Comment Form */}
       <div className="space-y-2">
+        {error && (
+          <div className="bg-red-900/20 border border-red-500/30 rounded-md p-2 text-sm text-red-400">
+            {error}
+          </div>
+        )}
         <div className="flex gap-2">
           <Input
             value={newComment}

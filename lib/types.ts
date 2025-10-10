@@ -112,3 +112,81 @@ export interface CreateCommentDto {
   author: string;
   content: string;
 }
+
+// Chat system types
+export type ChatType = 'direct' | 'group' | 'all';
+
+export interface Chat {
+  id: string;
+  name: string | null;
+  type: ChatType;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatParticipant {
+  id: string;
+  chatId: string;
+  userId: string;
+  joinedAt: string;
+  lastReadAt: string;
+}
+
+export interface MessageReaction {
+  id: string;
+  messageId: string;
+  userId: string;
+  reaction: string;
+  createdAt: string;
+  userName?: string;
+}
+
+export interface Message {
+  id: string;
+  chatId: string;
+  senderId: string;
+  content: string;
+  replyTo?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  isDeleted: boolean;
+  senderName?: string;
+  senderEmail?: string;
+  files?: MessageFile[];
+  reactions?: MessageReaction[];
+  repliedMessage?: Message | null;
+}
+
+export interface MessageFile {
+  id: string;
+  messageId: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  storagePath: string;
+  uploadedAt: string;
+}
+
+export interface TaskFile {
+  id: string;
+  taskId: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  storagePath: string;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
+export interface CreateMessageDto {
+  chatId: string;
+  content: string;
+  files?: File[];
+}
+
+export interface ChatWithDetails extends Chat {
+  participants: ChatParticipant[];
+  lastMessage?: Message;
+  unreadCount?: number;
+}

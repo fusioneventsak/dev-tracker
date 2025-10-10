@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { signout } from '@/app/auth/actions';
 import { Button } from '@/components/ui/button';
@@ -28,9 +29,15 @@ export default function Navbar({ userEmail }: NavbarProps) {
         <div className="flex justify-between h-16">
           <div className="flex">
             <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                Dev Tracker
-              </span>
+              <Image
+                src="/Logo.png"
+                alt="Dev Tracker"
+                width={500}
+                height={100}
+                className="h-10 w-auto"
+                unoptimized
+                priority
+              />
             </Link>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link
