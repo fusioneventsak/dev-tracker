@@ -12,11 +12,14 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - manifest.json (PWA manifest)
+     * - sw.js, workbox-*.js (service worker files)
+     * - icon-*.png, apple-touch-icon.png (PWA icons)
      * - /auth (authentication pages)
      * - /api/auth (authentication API routes)
      * - /api/digest (digest test endpoint)
      * - /api/cron (automated email cron jobs)
      */
-    '/((?!_next/static|_next/image|favicon.ico|auth/|api/auth/|api/digest/|api/cron/).*)',
+    '/((?!_next/static|_next/image|favicon|manifest.json|sw.js|workbox-|icon-|apple-touch-icon|auth/|api/auth/|api/digest/|api/cron/).*)',
   ],
 }
