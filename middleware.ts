@@ -13,9 +13,10 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - /auth (authentication pages)
+     * - /api/auth (authentication API routes)
      * - /api/digest (digest test endpoint)
      * - /api/cron (automated email cron jobs)
      */
-    '/((?!_next/static|_next/image|favicon.ico|auth/|api/digest/|api/cron/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|auth/|api/auth/|api/digest/|api/cron/).*)',
   ],
 }
