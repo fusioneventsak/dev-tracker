@@ -122,6 +122,8 @@ export default function ChatSidebar() {
   useEffect(() => {
     if (!chatId) return;
 
+    console.log('[Chat] Setting up realtime subscription for chat:', chatId);
+
     const channel = supabase
       .channel(`chat:${chatId}`)
       .on(
@@ -133,6 +135,7 @@ export default function ChatSidebar() {
           filter: `chat_id=eq.${chatId}`,
         },
         async (payload) => {
+          console.log('[Chat] Realtime message received:', payload);
           // Fetch the new message with files and reactions
           const { data } = await supabase
             .from('messages')
@@ -190,12 +193,16 @@ export default function ChatSidebar() {
             setMessages((prev) => {
               const exists = prev.some(m => m.id === newMsg.id);
               if (exists) {
+                console.log('[Chat] Message already exists, updating:', newMsg.id);
                 // Update existing message with files if it exists
                 return prev.map(m => m.id === newMsg.id ? newMsg : m);
               }
 
-              // If chat is closed and message is from someone else, show toast and increment unread
-              if (!isOwnMessage && !isOpen) {
+              console.log('[Chat] Adding new message to state. Chat open:', isOpen);
+
+              // If chat is closed, show toast and increment unread (even for own messages from other devices/tabs)
+              if (!isOpen) {
+                console.log('[Chat] Showing toast notification for new message');
                 toast(
                   `${senderName}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
                   {
@@ -342,9 +349,12 @@ export default function ChatSidebar() {
           ));
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Chat] Realtime subscription status:', status);
+      });
 
     return () => {
+      console.log('[Chat] Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
   }, [chatId, isOpen, supabase]);
