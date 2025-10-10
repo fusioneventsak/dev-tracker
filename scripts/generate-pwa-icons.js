@@ -3,7 +3,9 @@ const fs = require('fs');
 const path = require('path');
 
 const sizes = [192, 512];
-const inputFile = path.join(__dirname, '../public/Logo.png');
+const inputFile = process.argv[2]
+  ? path.join(__dirname, '..', process.argv[2])
+  : path.join(__dirname, '../public/Logo 2.png');
 
 async function generateIcons() {
   console.log('Generating PWA icons...');
