@@ -686,7 +686,7 @@ export async function getMessages(chatId: string, limit: number = 50) {
 
   // Get all unique user IDs from reactions
   const reactionUserIds = [...new Set(data.flatMap(m =>
-    m.message_reactions?.map((r: any) => r.user_id) || []
+    m.message_reactions?.map((r: { user_id: string }) => r.user_id) || []
   ))].filter(id => id !== currentUserId);
 
   // Combine all user IDs
@@ -714,7 +714,7 @@ export async function getMessages(chatId: string, limit: number = 50) {
     updatedAt: m.updated_at,
     isDeleted: m.is_deleted,
     senderEmail: m.sender_id === currentUserId ? currentUserEmail : (userMap.get(m.sender_id) || 'Unknown'),
-    files: m.message_files?.map((f: any) => ({
+    files: m.message_files?.map((f: { id: string; message_id: string; file_name: string; file_size: number; file_type: string; storage_path: string; uploaded_at: string }) => ({
       id: f.id,
       messageId: f.message_id,
       fileName: f.file_name,
@@ -723,7 +723,7 @@ export async function getMessages(chatId: string, limit: number = 50) {
       storagePath: f.storage_path,
       uploadedAt: f.uploaded_at
     })) || [],
-    reactions: m.message_reactions?.map((r: any) => ({
+    reactions: m.message_reactions?.map((r: { id: string; message_id: string; user_id: string; reaction: string; created_at: string }) => ({
       id: r.id,
       messageId: r.message_id,
       userId: r.user_id,

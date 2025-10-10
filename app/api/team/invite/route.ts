@@ -184,12 +184,13 @@ export async function POST(request: NextRequest) {
         },
         emailId: emailResponse.data.id, // Include Resend email ID for debugging
       });
-    } catch (emailError: any) {
-      console.error('❌ Error sending email:', emailError);
+    } catch (emailError) {
+      const error = emailError as Error & { response?: unknown; stack?: string };
+      console.error('❌ Error sending email:', error);
       console.error('Error details:', {
-        message: emailError.message,
-        stack: emailError.stack,
-        response: emailError.response,
+        message: error.message,
+        stack: error.stack,
+        response: error.response,
       });
 
       // Delete the invitation if email failed
@@ -201,7 +202,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Failed to send invitation email. Please try again.',
-          details: emailError.message || 'Unknown error',
+          details: error.message || 'Unknown error',
         },
         { status: 500 }
       );

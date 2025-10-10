@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteTeamMember, deleteAuthenticatedUser, updateTeamMember } from '@/lib/db';
+import { deleteAuthenticatedUser, updateTeamMember } from '@/lib/db';
 
 export async function PUT(
   request: NextRequest,

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { signout } from '@/app/auth/actions';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
@@ -13,6 +13,7 @@ interface NavbarProps {
 
 export default function Navbar({ userEmail }: NavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const isAuthPage = pathname?.startsWith('/auth');
 
   if (isAuthPage) {
@@ -20,7 +21,11 @@ export default function Navbar({ userEmail }: NavbarProps) {
   }
 
   async function handleSignOut() {
-    await signout();
+    const result = await signout();
+    if (result?.success) {
+      router.push('/auth/login');
+      router.refresh();
+    }
   }
 
   return (

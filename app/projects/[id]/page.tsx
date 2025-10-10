@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -84,7 +84,7 @@ export default function ProjectDetail() {
 
       // Map all profiles (including current user) to team members for assignment
       const allUsers = usersData.allProfiles || [];
-      setTeamMembers(allUsers.map((profile: any) => ({
+      setTeamMembers(allUsers.map((profile: { id: string; name: string | null; email: string }) => ({
         id: profile.id,
         name: profile.name || profile.email,
         email: profile.email

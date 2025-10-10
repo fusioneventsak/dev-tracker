@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, X, Paperclip, Loader2, Download, Maximize2, Reply, Smile } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
-import { Message, MessageFile, MessageReaction } from '@/lib/types';
+import { Message, MessageFile } from '@/lib/types';
 import { format } from 'date-fns';
 
 // Image Preview Component
@@ -19,7 +19,7 @@ function ImagePreview({
   isOwnMessage: boolean;
   onExpand: () => void;
   onDownload: () => void;
-  supabase: any;
+  supabase: ReturnType<typeof createClient>;
 }) {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,8 @@ function ImagePreview({
       setLoading(false);
     }
     loadImage();
-  }, [file.storagePath, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file.storagePath]);
 
   if (loading) {
     return (
@@ -50,6 +51,7 @@ function ImagePreview({
 
   return (
     <div className="relative group">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={imageUrl}
         alt={file.fileName}
@@ -104,6 +106,7 @@ export default function ChatSidebar() {
   // Initialize chat and load messages
   useEffect(() => {
     initializeChat();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Set up real-time subscription
@@ -157,7 +160,7 @@ export default function ChatSidebar() {
               updatedAt: data.updated_at,
               isDeleted: data.is_deleted,
               senderEmail: senderName,
-              files: data.message_files?.map((f: any) => ({
+              files: data.message_files?.map((f: MessageFile & { message_id: string; file_name: string; file_size: number; file_type: string; storage_path: string; uploaded_at: string }) => ({
                 id: f.id,
                 messageId: f.message_id,
                 fileName: f.file_name,
@@ -166,7 +169,7 @@ export default function ChatSidebar() {
                 storagePath: f.storage_path,
                 uploadedAt: f.uploaded_at
               })) || [],
-              reactions: data.message_reactions?.map((r: any) => ({
+              reactions: data.message_reactions?.map((r: { id: string; message_id: string; user_id: string; reaction: string; created_at: string }) => ({
                 id: r.id,
                 messageId: r.message_id,
                 userId: r.user_id,
@@ -231,7 +234,7 @@ export default function ChatSidebar() {
               updatedAt: data.updated_at,
               isDeleted: data.is_deleted,
               senderEmail: senderName,
-              files: data.message_files?.map((f: any) => ({
+              files: data.message_files?.map((f: MessageFile & { message_id: string; file_name: string; file_size: number; file_type: string; storage_path: string; uploaded_at: string }) => ({
                 id: f.id,
                 messageId: f.message_id,
                 fileName: f.file_name,
@@ -240,7 +243,7 @@ export default function ChatSidebar() {
                 storagePath: f.storage_path,
                 uploadedAt: f.uploaded_at
               })) || [],
-              reactions: data.message_reactions?.map((r: any) => ({
+              reactions: data.message_reactions?.map((r: { id: string; message_id: string; user_id: string; reaction: string; created_at: string }) => ({
                 id: r.id,
                 messageId: r.message_id,
                 userId: r.user_id,
@@ -273,7 +276,7 @@ export default function ChatSidebar() {
               m.id === messageId
                 ? {
                     ...m,
-                    reactions: data.map((r: any) => ({
+                    reactions: data.map((r: { id: string; message_id: string; user_id: string; reaction: string; created_at: string }) => ({
                       id: r.id,
                       messageId: r.message_id,
                       userId: r.user_id,
@@ -305,7 +308,7 @@ export default function ChatSidebar() {
             m.id === messageId
               ? {
                   ...m,
-                  reactions: data?.map((r: any) => ({
+                  reactions: data?.map((r: { id: string; message_id: string; user_id: string; reaction: string; created_at: string }) => ({
                     id: r.id,
                     messageId: r.message_id,
                     userId: r.user_id,
@@ -322,11 +325,12 @@ export default function ChatSidebar() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatId]);
+  }, [chatId, supabase]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
   async function initializeChat() {
@@ -606,6 +610,7 @@ export default function ChatSidebar() {
 
             {/* Image - scrollable */}
             <div className="flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={expandedImage.url}
                 alt={expandedImage.file.fileName}

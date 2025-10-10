@@ -151,7 +151,7 @@ export default function SetupPasswordPage() {
           </div>
           <CardTitle className="text-2xl text-slate-100">Welcome to Dev Tracker! 🎉</CardTitle>
           <CardDescription className="mt-2">
-            You've been invited to join the team
+            You have been invited to join the team
           </CardDescription>
         </CardHeader>
 
@@ -245,7 +245,7 @@ export default function SetupPasswordPage() {
                   Creating Account...
                 </>
               ) : (
-                'Create Account & Sign In'
+                <>Create Account &amp; Sign In</>
               )}
             </Button>
           </form>
