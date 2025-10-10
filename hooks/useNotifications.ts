@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Notification } from '@/lib/types';
+import type { Notification } from '@/lib/types';
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
