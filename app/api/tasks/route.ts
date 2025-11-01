@@ -8,6 +8,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
 
+    // Ensure the requester is authenticated; avoid throwing 500 on unauthenticated access
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const tasks = await getTasks(projectId || undefined);
     return NextResponse.json(tasks);
   } catch (error) {
@@ -39,7 +46,9 @@ export async function POST(request: NextRequest) {
       targetDate: body.targetDate || null,
       notes: body.notes || '',
       visibility: body.visibility || 'private',
-      sharedWith: body.sharedWith || []
+      sharedWith: body.sharedWith || [],
+      billed: !!body.billed,
+      billedDate: body.billed ? (body.billedDate ?? null) : null
     });
 
     // Create notification if task is assigned to someone

@@ -26,9 +26,17 @@ export default function TaskComments({ taskId, currentUser = 'Anonymous' }: Task
   async function fetchComments() {
     try {
       const res = await fetch(`/api/comments?taskId=${taskId}`);
+      if (res.status === 401) {
+        setError('Please sign in to view comments.');
+        setComments([]);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setComments(data);
+      } else {
+        const { error } = await res.json().catch(() => ({ error: 'Failed to fetch comments' }));
+        setError(error || 'Failed to fetch comments');
       }
     } catch (error) {
       console.error('Error fetching comments:', error);

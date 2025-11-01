@@ -32,6 +32,8 @@ export default function ProjectDetail() {
   const [visibility, setVisibility] = useState<Visibility>('private');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>('Anonymous');
+  const [taskBilled, setTaskBilled] = useState<boolean>(false);
+  const [taskBilledDate, setTaskBilledDate] = useState<string>('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -61,6 +63,7 @@ export default function ProjectDetail() {
       console.error('Error fetching current user:', error);
     }
   }
+
 
   async function fetchData() {
     try {
@@ -127,6 +130,8 @@ export default function ProjectDetail() {
     });
     setVisibility('private');
     setSelectedUsers([]);
+    setTaskBilled(false);
+    setTaskBilledDate('');
     setDialogOpen(true);
   }
 
@@ -144,6 +149,8 @@ export default function ProjectDetail() {
     });
     setVisibility(task.visibility);
     setSelectedUsers(task.sharedWith);
+    setTaskBilled(!!task.billed);
+    setTaskBilledDate(task.billedDate ? task.billedDate.slice(0, 10) : '');
     setDialogOpen(true);
   }
 
@@ -157,8 +164,8 @@ export default function ProjectDetail() {
       const method = editingTask ? 'PUT' : 'POST';
 
       const body = editingTask
-        ? { ...formData, visibility, sharedWith: visibility === 'specific' ? selectedUsers : [] }
-        : { ...formData, projectId, visibility, sharedWith: visibility === 'specific' ? selectedUsers : [] };
+        ? { ...formData, visibility, sharedWith: visibility === 'specific' ? selectedUsers : [], billed: taskBilled, billedDate: taskBilled ? (taskBilledDate || new Date().toISOString().slice(0,10)) : null }
+        : { ...formData, projectId, visibility, sharedWith: visibility === 'specific' ? selectedUsers : [], billed: taskBilled, billedDate: taskBilled ? (taskBilledDate || new Date().toISOString().slice(0,10)) : null };
 
       const res = await fetch(url, {
         method,
@@ -357,6 +364,11 @@ export default function ProjectDetail() {
                                 {commentCounts[task.id]}
                               </span>
                             )}
+                            {task.billed && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-400/20 text-emerald-400 border border-emerald-400/30">
+                                Billed
+                              </span>
+                            )}
                           </div>
                           {task.description && (
                             <div className="text-sm text-slate-400 mt-1">{task.description}</div>
@@ -532,6 +544,31 @@ export default function ProjectDetail() {
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="Additional notes"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Billing</Label>
+                  <label className="flex items-center gap-2 text-sm text-slate-300">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-700"
+                      checked={taskBilled}
+                      onChange={(e) => setTaskBilled(e.target.checked)}
+                    />
+                    Mark as billed
+                  </label>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="billedDate">Billed Date</Label>
+                  <Input
+                    id="billedDate"
+                    type="date"
+                    value={taskBilledDate}
+                    onChange={(e) => setTaskBilledDate(e.target.value)}
+                    disabled={!taskBilled}
+                  />
+                </div>
               </div>
 
               <div className="grid gap-2">

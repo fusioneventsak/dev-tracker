@@ -10,6 +10,8 @@ export interface Project {
   name: string;
   visibility: Visibility;
   sharedWith: string[];
+  billed: boolean;
+  billedDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -28,6 +30,8 @@ export interface Task {
   notes: string;
   visibility: Visibility;
   sharedWith: string[];
+  billed: boolean;
+  billedDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,12 +70,16 @@ export interface CreateProjectDto {
   name: string;
   visibility?: Visibility;
   sharedWith?: string[];
+  billed?: boolean;
+  billedDate?: string | null;
 }
 
 export interface UpdateProjectDto {
   name?: string;
   visibility?: Visibility;
   sharedWith?: string[];
+  billed?: boolean;
+  billedDate?: string | null;
 }
 
 export interface CreateTaskDto {
@@ -86,6 +94,8 @@ export interface CreateTaskDto {
   notes?: string;
   visibility?: Visibility;
   sharedWith?: string[];
+  billed?: boolean;
+  billedDate?: string | null;
 }
 
 export interface UpdateTaskDto {
@@ -100,6 +110,8 @@ export interface UpdateTaskDto {
   notes?: string;
   visibility?: Visibility;
   sharedWith?: string[];
+  billed?: boolean;
+  billedDate?: string | null;
 }
 
 export interface CreateTeamMemberDto {

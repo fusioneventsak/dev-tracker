@@ -23,7 +23,9 @@ export async function POST(request: NextRequest) {
     const project = await createProject({
       name: body.name.trim(),
       visibility: body.visibility,
-      sharedWith: body.sharedWith
+      sharedWith: body.sharedWith,
+      billed: body.billed,
+      billedDate: body.billedDate ?? null
     });
     return NextResponse.json(project, { status: 201 });
   } catch (error) {

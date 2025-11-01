@@ -3,9 +3,9 @@ import { getTaskById, updateTask, deleteTask } from '@/lib/db';
 import { UpdateTaskDto } from '@/lib/types';
 import { Resend } from 'resend';
 import { generateTaskAssignmentEmail } from '@/lib/emails/templates';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Note: Lazy-initialize Resend only when needed to avoid errors if API key is missing
 
 export async function GET(
   request: NextRequest,
@@ -13,6 +13,14 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    // Ensure the requester is authenticated; avoid throwing 500 on unauthenticated access
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const task = await getTaskById(id);
 
     if (!task) {
@@ -94,12 +102,17 @@ export async function PUT(
             taskUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/projects/${task.projectId}`
           });
 
-          await resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL || 'Dev Tracker <onboarding@fusiontracker.pro>',
-            to: assigneeProfile.email,
-            subject: `✅ You've been assigned: ${task.featureTask}`,
-            html: emailHtml
-          });
+          const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+          if (!resend) {
+            console.warn('RESEND_API_KEY not set; skipping task assignment email');
+          } else {
+            await resend.emails.send({
+              from: process.env.RESEND_FROM_EMAIL || 'Dev Tracker <onboarding@fusiontracker.pro>',
+              to: assigneeProfile.email,
+              subject: `✅ You've been assigned: ${task.featureTask}`,
+              html: emailHtml
+            });
+          }
 
           console.log(`✓ Sent task assignment email to ${assigneeProfile.email}`);
         }
@@ -112,7 +125,11 @@ export async function PUT(
     return NextResponse.json(task);
   } catch (error) {
     console.error('Error updating task:', error);
-    return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 });
+    } else {
+      return NextResponse.json({ error: JSON.stringify(error) }, { status: 500 });
+    }
   }
 }
 

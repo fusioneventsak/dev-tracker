@@ -3,9 +3,9 @@ import { getCommentsByTask, createComment, getTaskById } from '@/lib/db';
 import { CreateCommentDto } from '@/lib/types';
 import { Resend } from 'resend';
 import { generateTaskCommentEmail } from '@/lib/emails/templates';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Note: Lazy-initialize Resend only when needed to avoid errors if API key is missing
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,11 +16,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Task ID is required' }, { status: 400 });
     }
 
+    // Ensure the requester is authenticated; avoid throwing 500 on unauthenticated access
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const comments = await getCommentsByTask(taskId);
     return NextResponse.json(comments);
   } catch (error) {
     console.error('Error fetching comments:', error);
-    return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 });
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 });
+    } else {
+      return NextResponse.json({ error: JSON.stringify(error) }, { status: 500 });
+    }
   }
 }
 
@@ -79,14 +90,19 @@ export async function POST(request: NextRequest) {
             taskUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/projects/${task.projectId}`
           });
 
-          await resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL || 'Dev Tracker <onboarding@fusiontracker.pro>',
-            to: assigneeProfile.email,
-            subject: `💬 New comment on: ${task.featureTask}`,
-            html: emailHtml
-          });
+          const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+          if (!resend) {
+            console.warn('RESEND_API_KEY not set; skipping comment notification email');
+          } else {
+            await resend.emails.send({
+              from: process.env.RESEND_FROM_EMAIL || 'Dev Tracker <onboarding@fusiontracker.pro>',
+              to: assigneeProfile.email,
+              subject: `💬 New comment on: ${task.featureTask}`,
+              html: emailHtml
+            });
 
-          console.log(`✓ Sent comment notification email to ${assigneeProfile.email}`);
+            console.log(`✓ Sent comment notification email to ${assigneeProfile.email}`);
+          }
         }
       }
     } catch (emailError) {
