@@ -2,6 +2,44 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { Database, Project, Task, TeamMember, ProjectStats, TaskComment, Priority, Status } from './types';
 
+// Define database response types
+interface ProjectDbResponse {
+  id: string;
+  user_id: string;
+  name: string;
+  visibility: string;
+  shared_with: string[] | null;
+  billed: boolean;
+  billed_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TaskDbResponse {
+  id: string;
+  project_id: string;
+  done: boolean;
+  feature_task: boolean;
+  description: string | null;
+  assigned_to: string | null;
+  priority: Priority;
+  status: Status;
+  start_date: string | null;
+  target_date: string | null;
+  notes: string | null;
+  visibility: string;
+  shared_with: string[] | null;
+  billed: boolean;
+  billed_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+type TaskInput = Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'done'> & {
+  billed?: boolean;
+  billedDate?: string | null;
+};
+
 // Helper to get current user ID
 async function getCurrentUserId() {
   const supabase = await createClient();
@@ -26,13 +64,13 @@ export async function getProjects(): Promise<Project[]> {
   // 1. User owns the project (user_id matches)
   // 2. Project is visible to all (visibility = 'all')
   // 3. User is in the sharedWith list (shared_with contains userId)
-  const filteredData = data.filter((p: any) =>
+  const filteredData = data.filter((p: ProjectDbResponse) =>
     p.user_id === userId ||
     p.visibility === 'all' ||
     (p.shared_with && Array.isArray(p.shared_with) && p.shared_with.includes(userId))
   );
 
-  return filteredData.map((p: any) => ({
+  return filteredData.map((p: ProjectDbResponse) => ({
     id: p.id,
     userId: p.user_id,
     name: p.name,
@@ -191,7 +229,7 @@ export async function getTasks(projectId?: string): Promise<Task[]> {
   const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data.map((t: any) => ({
+  return data.map((t: TaskDbResponse) => ({
     id: t.id,
     projectId: t.project_id,
     done: t.done,
@@ -264,8 +302,8 @@ export async function createTask(taskData: Omit<Task, 'id' | 'createdAt' | 'upda
       notes: taskData.notes,
       visibility: taskData.visibility,
       shared_with: taskData.sharedWith,
-      billed: taskData.hasOwnProperty('billed') ? !!(taskData as any).billed : false,
-      billed_date: (taskData as any).billedDate ?? null
+      billed: 'billed' in taskData ? !!taskData.billed : false,
+      billed_date: taskData.billedDate ?? null
     }])
     .select()
     .single();
