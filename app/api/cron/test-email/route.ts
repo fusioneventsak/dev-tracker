@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
             notes: '',
             visibility: 'private',
             sharedWith: [],
+            billed: false,
+            billedDate: null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           },
@@ -48,6 +50,8 @@ export async function GET(request: NextRequest) {
             notes: '',
             visibility: 'private',
             sharedWith: [],
+            billed: false,
+            billedDate: null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           }
