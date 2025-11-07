@@ -64,6 +64,8 @@ export async function createProject(dto: { name: string; visibility?: string; sh
     name: dto.name,
     visibility: (dto.visibility as 'private' | 'specific' | 'all') || 'private',
     sharedWith: dto.sharedWith || [],
+    billed: false,
+    billedDate: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };

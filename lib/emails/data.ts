@@ -87,18 +87,22 @@ export async function getUserDailySnapshot(userId: string): Promise<UserTaskSnap
     startDate: t.start_date,
     targetDate: t.target_date,
     notes: t.notes || '',
-    visibility: t.visibility,
-    sharedWith: t.shared_with,
+    visibility: t.visibility as Task['visibility'],
+    sharedWith: t.shared_with || [],
     createdAt: t.created_at,
-    updatedAt: t.updated_at
+    updatedAt: t.updated_at,
+    billed: t.billed ?? false,
+    billedDate: t.billed_date ?? null
   }));
 
   const projectList: Project[] = (projects || []).map(p => ({
     id: p.id,
     userId: p.user_id,
     name: p.name,
-    visibility: p.visibility,
-    sharedWith: p.shared_with,
+    visibility: p.visibility as Project['visibility'],
+    sharedWith: p.shared_with || [],
+    billed: !!p.billed,
+    billedDate: p.billed_date ?? null,
     createdAt: p.created_at,
     updatedAt: p.updated_at
   }));
